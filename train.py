@@ -3,25 +3,23 @@ import time
 import math
 from preprocess import TEXT
 import random
+import numpy as np
 def train_model(x, y, model, criterion, optimizer, scheduler, current_epoch):
     model.train() # Turn on the train mode
     total_loss = 0.
     start_time = time.time()
-    print(x.shape, len(y))
-    for i in range(0, 30):        
+    for i in range(0,500):        
         optimizer.zero_grad()
-        pick = random.randrange(0, x.size(1))
-        output = model(x[:,pick,0])
-        #print(output)
-        mean_sig = torch.mean(output)
-        #print(mean_sig)
-        loss = criterion(mean_sig, y[i])
+        p = random.randrange(0, x.size(1) - 16)
+        ins = x[:,p:p+16,0].t()
+        output = model(ins)
+        loss = criterion(output, y[0,p:p+16,0])
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
         optimizer.step()
 
         total_loss += loss.item()
-        log_interval = 1
+        log_interval = 100
         if i % log_interval == 0 and i > 0:
             cur_loss = total_loss / log_interval
             elapsed = time.time() - start_time
@@ -34,13 +32,19 @@ def train_model(x, y, model, criterion, optimizer, scheduler, current_epoch):
             total_loss = 0
             start_time = time.time()
 
-def evaluate(x, y, model, criterion):
+def evaluate(x, y,real, model, criterion):
     model.eval()
-    total_loss = 0.
+    losses = []
     with torch.no_grad():
-        for i in range(0, 50):
-            output = model(x[:,i,0])
-            mean_sig = torch.mean(output)
-            loss = criterion(mean_sig, y[i])
-            total_loss += loss
-    return total_loss / ((x.size(1)) - 1)
+        for i in range(0, 200):
+            print('-' * 89)
+            print(real.iloc[i,5])
+            ins = x[:,i:i+1,0].t()
+            output = model(ins)
+            loss = criterion(output, y[0,i:i+1,0])
+            print("pred: {}, truth: {}, loss: {}".format(output, y[0,i:i+1,0], loss))
+            losses.append(loss)
+            print('-' * 89)
+
+    losses = np.array(losses)
+    return losses.mean()

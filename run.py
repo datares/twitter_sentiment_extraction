@@ -18,13 +18,18 @@ from train import train_model, evaluate
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def preprocess():
-    ds = pd.read_csv("train.csv", encoding = "ISO-8859-1", header=None)
-    x_train, y_train = create_trainset(ds.sample(frac=1))
-    x_val, y_val = create_trainset(ds.sample(frac=0.2))
-    return x_train, y_train, x_val, y_val
+    train_ds = pd.read_csv("train.csv", encoding = "ISO-8859-1", header=None)
+    test_ds = pd.read_csv("test.csv", encoding = "ISO-8859-1", header=None)
+    
+    r_train = train_ds.sample(frac=1)
+    r_test = test_ds.sample(frac=1)
+    x_train, y_train = create_trainset(r_train)
+    x_val, y_val = create_trainset(r_test)
+
+    return x_train, y_train, x_val, y_val, r_train, r_test
 
 def create_trainset(ds):
-    dic = {0: -1, 2: 0, 4: +1}
+    dic = {0: 0,2:0.5, 4: 1}
 
     tweets = ds.iloc[:,5].values
     sentiments = ds.iloc[:,0].values
@@ -32,15 +37,16 @@ def create_trainset(ds):
     for i in range(len(tweets)):
     #for i in range(len(tweets)):
         # create tensors
-        tweet_embed = TEXT.numericalize([tweets[i]])
-        sentiment = torch.FloatTensor([[dic[sentiments[i]]]])
-        
-        # append to list of tensors
-        x.append(tweet_embed)
-        y.append(sentiment)
-        
+        if len(tweets[i]) <= 120:
+
+            tweet_embed = TEXT.numericalize([tweets[i]])
+            sentiment = torch.LongTensor([[dic[sentiments[i]]]])
+            
+            # append to list of tensors
+            x.append(tweet_embed)
+            y.append(sentiment)
     # return a padded version of the sequence to allow for same size tensors
-    return pad_sequence(x), y
+    return pad_sequence(x), pad_sequence(y)
 
 def extract_sentiment_words():
     # create vocabulary using wikitext2
@@ -48,7 +54,7 @@ def extract_sentiment_words():
     TEXT.build_vocab(train_txt)
 
     start = time.time()
-    x_train, y_train, x_val, y_val = preprocess()
+    x_train, y_train, x_val, y_val, rtrain, rtest = preprocess()
     end = time.time()
 
     print("PREPROCESSING TIME: {}".format(end - start))
@@ -68,21 +74,21 @@ def extract_sentiment_words():
 
     # initialize main torch vars
     model = TransformerModel(ntokens, emsize, nhead, nhid, nlayers, dropout).to(device)
-    criterion = nn.BCELoss()
+    criterion = nn.CrossEntropyLoss()
 
-    lr = 0.001 # learning rate
+    lr = 5 # learning rate
 
     optimizer = torch.optim.SGD(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.95)
 
     best_val_loss = float("inf")
-    epochs = 5
+    epochs = 50
     best_model = None
     
     for epoch in range(1, epochs + 1):
         epoch_start_time = time.time()
         train_model(x_train, y_train, model, criterion, optimizer, scheduler, epoch)
-        val_loss = evaluate(x_val, y_val,model,criterion)
+        val_loss = evaluate(x_val, y_val,rtest, model,criterion)
         print('-' * 89)
         print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
             'valid ppl {:8.2f}'.format(epoch, (time.time() - epoch_start_time),
@@ -93,7 +99,7 @@ def extract_sentiment_words():
             best_val_loss = val_loss
             best_model = model
 
-        #scheduler.step()
+        scheduler.step()
     
     # test_loss = evaluate(best_model, criterion, test_data)
 
