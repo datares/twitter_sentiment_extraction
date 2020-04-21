@@ -76,7 +76,7 @@ def extract_sentiment_words():
     model = TransformerModel(ntokens, emsize, nhead, nhid, nlayers, dropout).to(device)
     criterion = nn.CrossEntropyLoss()
 
-    lr = 5 # learning rate
+    lr = 0.009 # learning rate
 
     optimizer = torch.optim.SGD(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.95)
