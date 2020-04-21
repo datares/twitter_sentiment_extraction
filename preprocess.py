@@ -11,11 +11,10 @@ TEXT.build_vocab(train_txt)
 bptt = 35
 
 def batchify(data, bsz):
-    data = TEXT.numericalize([data.examples[0].text])
     # Divide the dataset into bsz parts.
-    nbatch = data.size(0) // bsz
+    #nbatch = data.size(0) // bsz
     # Trim off any extra elements that wouldn't cleanly fit (remainders).
-    data = data.narrow(0, 0, nbatch * bsz)
+    #data = data.narrow(0, 0, nbatch * bsz)
     # Evenly divide the data across the bsz batches.
     data = data.view(bsz, -1).t().contiguous()
     return data

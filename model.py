@@ -15,8 +15,7 @@ class TransformerModel(nn.Module):
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
         self.encoder = nn.Embedding(ntoken, ninp)
         self.ninp = ninp
-        self.decoder = nn.Linear(ninp, ntoken)
-
+        self.decoder = nn.Linear(ninp, 1)
         self.init_weights()
 
     def _generate_square_subsequent_mask(self, sz):
@@ -40,7 +39,7 @@ class TransformerModel(nn.Module):
         src = self.pos_encoder(src)
         output = self.transformer_encoder(src, self.src_mask)
         output = self.decoder(output)
-        return output
+        return torch.sigmoid(output)
 
 class PositionalEncoding(nn.Module):
 
