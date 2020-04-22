@@ -46,7 +46,7 @@ def create_trainset(ds):
             x.append(tweet_embed)
             y.append(sentiment)
     # return a padded version of the sequence to allow for same size tensors
-    return pad_sequence(x), pad_sequence(y)
+    return pad_sequence(x).to(device), pad_sequence(y).to(device)
 
 def extract_sentiment_words():
     # create vocabulary using wikitext2
@@ -74,9 +74,9 @@ def extract_sentiment_words():
 
     # initialize main torch vars
     model = TransformerModel(ntokens, emsize, nhead, nhid, nlayers, dropout).to(device)
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss().to(device)
 
-    lr = 0.009 # learning rate
+    lr = 0.05 # learning rate
 
     optimizer = torch.optim.SGD(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.95)

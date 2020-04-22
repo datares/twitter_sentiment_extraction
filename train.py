@@ -4,22 +4,25 @@ import math
 from preprocess import TEXT
 import random
 import numpy as np
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 def train_model(x, y, model, criterion, optimizer, scheduler, current_epoch):
     model.train() # Turn on the train mode
     total_loss = 0.
     start_time = time.time()
-    for i in range(0,500):        
+    for i in range(0,1000):        
         optimizer.zero_grad()
         p = random.randrange(0, x.size(1) - 16)
-        ins = x[:,p:p+16,0].t()
+        ins = x[:,i:i+200,0].t().to(device)
         output = model(ins)
-        loss = criterion(output, y[0,p:p+16,0])
+        loss = criterion(output, y[0,i:i+200,0])
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
         optimizer.step()
 
         total_loss += loss.item()
-        log_interval = 100
+        log_interval = 500
         if i % log_interval == 0 and i > 0:
             cur_loss = total_loss / log_interval
             elapsed = time.time() - start_time
@@ -43,7 +46,7 @@ def evaluate(x, y,real, model, criterion):
             output = model(ins)
             loss = criterion(output, y[0,i:i+1,0])
             print("pred: {}, truth: {}, loss: {}".format(output, y[0,i:i+1,0], loss))
-            losses.append(loss)
+            losses.append(loss.cpu().numpy())
             print('-' * 89)
 
     losses = np.array(losses)
